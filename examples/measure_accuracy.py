@@ -72,10 +72,11 @@ for i in tqdm(range(args.num_tasks)):
     fast_learner.set_params(meta_params)
     task = dataset.__getitem__(i)
     vl_before = fast_learner.get_loss(task['x_val'], task['y_val'], return_numpy=True)
-    if args.lam <= 0.0:
-        tl = fast_learner.learn_task(task, num_steps=args.n_steps, add_regularization=False)
-    else:
-        tl = fast_learner.learn_task(task, num_steps=args.n_steps, add_regularization=True, w_0=meta_params, lam=args.lam)
+    tl = fast_learner.learn_task(task, num_steps=args.n_steps, add_regularization=False)
+    fast_learner.inner_opt.zero_grad()
+    regu_loss = fast_learner.regularization_loss(meta_params, args.lam)
+    regu_loss.backward()
+    fast_learner.inner_opt.step()
     vl_after = fast_learner.get_loss(task['x_val'], task['y_val'], return_numpy=True)
     tacc = utils.measure_accuracy(task, fast_learner, train=True)
     vacc = utils.measure_accuracy(task, fast_learner, train=False)
